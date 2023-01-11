@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title></title>
+    </head>
+
+    <body>
+        <input type='file' accept='eml' onchange='openFile(event)'><br>
+        <div id="output"></div>
+		<div><button onclick='save()' id="">保存</button> </div>
+	</body>
+    <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript">
+	
+	
+	
+	/**
+*
+*  Base64 encode / decode
+*  http://www.webtoolkit.info
+*
+**/
+var Base64 = {
+
+    // private property
+    _keyStr: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+
+    // public method for encoding
+    , encode: function (input)
+    {
+        var output = "";
+        var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+        var i = 0;
+
+        input = Base64._utf8_encode(input);
+
+        while (i < input.length)
+        {
+            chr1 = input.charCodeAt(i++);
+            chr2 = input.charCodeAt(i++);
+            chr3 = input.charCodeAt(i++);
+
+            enc1 = chr1 >> 2;
+            enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+            enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+            enc4 = chr3 & 63;
+
+            if (isNaN(chr2))
+            {
+                enc3 = enc4 = 64;
+            }
+            else if (isNaN(chr3))
+            {
+                enc4 = 64;
+            }
+
+            output = output +
+                this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
+                this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
+        } // Whend 
+
+        return output;
+    } // End Function encode 
+
+
+    // public method for decoding
+    ,decode: function (input)
+    {
+        var output = "";
+        var chr1, chr2, chr3;
+        var enc1, enc2, enc3, enc4;
+        var i = 0;
+
+        input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+        while (i < input.length)
+        {
+            enc1 = this._keyStr.indexOf(input.charAt(i++));
+            enc2 = this._keyStr.indexOf(input.charAt(i++));
+            enc3 = this._keyStr.indexOf(input.charAt(i++));
+            enc4 = this._keyStr.indexOf(input.charAt(i++));
+
+            chr1 = (enc1 << 2) | (enc2 >> 4);
+            chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+            chr3 = ((enc3 & 3) << 6) | enc4;
+
+            output = output + String.fromCharCode(chr1);
+
+            if (enc3 != 64)
+            {
+                output = output + String.fromCharCode(chr2);
+            }
+
+            if (enc4 != 64)
+            {
+                output = output + String.fromCharCode(chr3);
+            }
+
+        } // Whend 
+
+        output = Base64._utf8_decode(output);
+
+        return output;
+    } // End Function decode 
+
+
+    // private method for UTF-8 encoding
+    ,_utf8_encode: function (string)
+    {
+        var utftext = "";
+        string = string.replace(/\r\n/g, "\n");
+
+        for (var n = 0; n < string.length; n++)
+        {
+            var c = string.charCodeAt(n);
+
+            if (c < 128)
+            {
+                utftext += String.fromCharCode(c);
+            }
+            else if ((c > 127) && (c < 2048))
+            {
+                utftext += String.fromCharCode((c >> 6) | 192);
+                utftext += String.fromCharCode((c & 63) | 128);
+            }
+            else
+            {
+                utftext += String.fromCharCode((c >> 12) | 224);
+                utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+                utftext += String.fromCharCode((c & 63) | 128);
+            }
+
+        } // Next n 
+
+        return utftext;
+    } // End Function _utf8_encode 
+
+    // private method for UTF-8 decoding
+    ,_utf8_decode: function (utftext)
+    {
+        var string = "";
+        var i = 0;
+        var c, c1, c2, c3;
+        c = c1 = c2 = 0;
+
+        while (i < utftext.length)
+        {
+            c = utftext.charCodeAt(i);
+
+            if (c < 128)
+            {
+                string += String.fromCharCode(c);
+                i++;
+            }
+            else if ((c > 191) && (c < 224))
+            {
+                c2 = utftext.charCodeAt(i + 1);
+                string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+                i += 2;
+            }
+            else
+            {
+                c2 = utftext.charCodeAt(i + 1);
+                c3 = utftext.charCodeAt(i + 2);
+                string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+                i += 3;
+            }
+
+        } // Whend 
+
+        return string;
+    } // End Function _utf8_decode 
+
+}
+
+
+
+
+	var fileContent = '';
+	var fileName = '';
+	var htmlIndexStartN = 0;
+	var htmlIndexEndn = 0;
+	var tag = '';
+	
+	var openFile = function(event) {
+		var input = event.target;
+		var reader = new FileReader();
+		
+		
+		reader.onload = function() {
+		var str = reader.result;
+		var path = event.path[0].value;
+		console.log('文件名字:',path.split('\\')[2]);
+		fileName = path.split('\\')[2];
+		//reader.readAsDataURL(event.target.files[0]); // event is from the HTML input
+		//console.log(event.target.files[0].name);
+		
+			if(str) {
+				fileContent = str;
+				var strArr = str.split('\r');
+				
+				
+				
+				var htmlTag = 'Content-Type: text/html;'
+				//先提取正文分割符
+				for (var i = 0; i < strArr.length; i++) {
+					var strLine = strArr[i];
+					if (strLine.indexOf(htmlTag, 0) != -1) {
+					
+						tag = strArr[i-1];					
+						break;
+					}
+				}
+				console.log(tag);
+				var emlHtmlStr = '';
+				//根据分隔符获取eml中html正文
+				var htmlIndexStart = 0;
+				var htmlIndexEnd = 0;
+				for (var i = 0; i < strArr.length; i++) {
+					if (strArr[i].indexOf(htmlTag, 0) != -1) {					
+						htmlIndexStart = i+3;	
+						htmlIndexStartN = htmlIndexStart;
+					}
+					if (i >= htmlIndexStart && htmlIndexStart != 0) {
+						if (strArr[i].indexOf(tag, 0) != -1) {
+							htmlIndexEndn = i;
+							break;
+						}
+						emlHtmlStr += strArr[i];
+					}
+				}
+				//console.log(htmlIndexStart);
+				//console.log(emlHtmlStr);
+				
+				str = Base64.decode(emlHtmlStr);
+				//console.log(str);
+										
+				//显示文件内容
+				//$("#output").html(str);
+					
+				const html = str;
+				const dom = document.createRange().createContextualFragment(html);
+				// create DocumentFragment
+				const preheader = dom.querySelector("div"); // Select the element that contains the content
+				//preheader.setAttribute("ondblclick","ShowElement(this)")
+			
+				
+			
+				const DFS = {
+					nodes: [],
+					do (root) {
+						for (let i = 0;i < root.childNodes.length;i++) {
+							var node = root.childNodes[i];
+							// 过滤 text 节点、script 节点
+							if ((node.nodeType == 3) && (node.nodeName != 'SCRIPT')) {
+								//console.log(node.nodeType + '@@@' +node.nodeValue);
+								//console.log(node.parentNode);
+								if (node.parentNode.nodeValue != '' ) {
+									node.parentNode.setAttribute("ondblclick","ShowElement(this)");
+								}
+							}
+							if ((node.nodeType != 3) && (node.nodeName != 'SCRIPT')) {
+								this.nodes.push(node);
+								//console.log(node);
+								if (node.textContent != '' && node.childNodes.length < 3) {
+									//node.setAttribute("ondblclick","ShowElement(this)");
+								}
+								
+								this.do(node);
+							}
+						}
+						return this.nodes;
+					}
+				}
+				DFS.do(dom);
+				//console.log(DFS.do(dom));
+				
+
+				$("#output").html(dom);
+			
+			}
+		};
+		reader.readAsText(input.files[0]);
+	};
+	
+
+	
+	function ShowElement(element) {
+	console.log(element.childNodes)
+	console.log(element)
+	//element.childNodes = [];
+	console.log(element.childNodes)
+    //var oldhtml = element.innerHTML;
+	var oldhtml = element.textContent;
+    //创建新的input元素
+    var newobj = document.createElement('input');
+	newobj.style = "width:500px;";//height:20px
+    //为新增元素添加类型
+    newobj.type = 'text';
+    //为新增元素添加value值
+    newobj.value = oldhtml;
+    //为新增元素添加光标离开事件
+    newobj.onblur = function() {
+		if(this.value && this.value.trim()!==""){
+			element.innerHTML = this.value == oldhtml ? oldhtml : this.value;
+		} else {
+			element.innerHTML = oldhtml;
+		}
+      //当触发时判断新增元素值是否为空，为空则不修改，并返回原有值 
+    }
+    //设置该标签的子节点为空
+    element.innerHTML = '';
+    //添加该标签的子节点，input对象
+    element.appendChild(newobj);
+    //设置选择文本的内容或设置光标位置（两个参数：start,end；start为开始位置，end为结束位置；如果开始位置和结束位置相同则就是光标位置）
+    newobj.setSelectionRange(0, oldhtml.length);
+    //设置获得光标
+    newobj.focus();
+  }
+	
+	
+	var save = function() {
+		var rootNode = document.getElementById("output");
+		//console.log(rootNode.innerHTML);
+		var html = rootNode.innerHTML;
+		var base64Html = Base64.encode(html);
+		//console.log(base64Html);
+		//77个字母换一行
+		var base64HtmlNew = ''; 
+		for (var i = 0; i < base64Html.length; i++) {
+			base64HtmlNew += base64Html.charAt(i);
+			if (i % 77 == 0 && i > 0) {
+				base64HtmlNew += '\r\n';
+			}
+			
+		}
+		//console.log(fileContent);	
+		//富文本替换
+		var nFileContent =  htmlReplace(fileContent,base64HtmlNew)
+		console.log(nFileContent);	
+		
+		let time = new Date()
+		let dateTime = time.toLocaleString();	
+		exportRaw(dateTime + '修改_' + fileName, nFileContent);
+		
+		
+	}
+	
+	//eml富文本替换
+	function htmlReplace(source,target) {
+	
+		var htmlTag = 'Content-Type: text/html;'
+		//var htmlIndexStartN = 0;
+		//var htmlIndexEndn = 0;
+		var strArrNew = [];
+		var strArr = source.split('\r');
+		var isContinue = false;
+		var htmlIndexStart = 0;
+		for (var i = 0; i < strArr.length; i++) {
+		
+			if (strArr[i].indexOf(htmlTag, 0) != -1) {		
+				htmlIndexStart = i+3;
+				
+			}
+			if (i == htmlIndexStart && htmlIndexStart != 0) {
+			
+				isContinue = true;
+			}
+			
+			if (i >= htmlIndexStart && htmlIndexStart != 0) {
+			
+				
+				if (strArr[i].indexOf(tag, 0) != -1) {
+					isContinue = false;
+				}
+				
+			}
+			
+			if (isContinue) {
+				continue;
+			}
+			strArrNew.push(strArr[i]);
+			
+			
+		}
+		
+		
+		
+		console.log(strArrNew.join(''));	
+		
+		//console.log(target);	
+		var strArrN = target.split('\r');
+		//console.log(strArrN);	
+		for (var i = 0; i < strArrN.length; i++) {
+			//strArr.insert(htmlIndexStartN,strArrN[strArrN.length - i - 1])
+			strArrNew.splice(htmlIndexStartN, 0, strArrN[strArrN.length - i - 1]);
+			
+		}	
+		strArrNew.splice(htmlIndexStartN, 0, null);
+		strArrNew.splice(htmlIndexStartN, 0, '\n\r');
+		return strArrNew.join('');
+		
+	}
+	
+	
+	function fakeClick(obj) {
+		var ev = document.createEvent("MouseEvents");
+		ev.initMouseEvent("click", true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+		obj.dispatchEvent(ev);
+	}
+
+	function exportRaw(name, data) {
+		var urlObject = window.URL || window.webkitURL || window;
+		var export_blob = new Blob([data]);
+		var save_link = document.createElementNS("http://www.w3.org/1999/xhtml", "a")
+		save_link.href = urlObject.createObjectURL(export_blob);
+		save_link.download = name;
+		fakeClick(save_link);
+	}
+
+	</script>
+	<style>
+	input[type="text"]{
+		width:"500px;";
+	}
+	</style>
+
+</html>
